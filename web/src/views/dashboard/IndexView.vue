@@ -414,6 +414,7 @@ if (import.meta.hot) {
   <app-page :show-footer="true" min-w-375>
     <div flex-1>
       <n-space vertical>
+        <n-alert type="info">耗子面板将于近期 v3.0 版本更名为 AcePanel，特此通知！</n-alert>
         <n-card :segmented="true" size="small">
           <n-page-header :subtitle="systemInfo?.panel_version">
             <n-grid :cols="4" pb-10>
