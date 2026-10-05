@@ -4043,7 +4043,7 @@ msgstr ""
 msgid "failed to get the latest version: %v"
 msgstr ""
 
-#: internal/apps/fail2ban/app.go:224
+#: internal/apps/fail2ban/app.go:229
 msgid "failed to get the status of rule %s: %v"
 msgstr ""
 
@@ -4896,6 +4896,10 @@ msgstr ""
 
 #: internal/data/website.go:723
 msgid "rewrite rules, custom configs, rate limit and real IP settings are not migrated"
+msgstr ""
+
+#: internal/apps/fail2ban/app.go:226
+msgid "rule %s is not running, please try restarting Fail2ban"
 msgstr ""
 
 #: internal/apps/fail2ban/app.go:131
