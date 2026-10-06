@@ -144,7 +144,8 @@ export const useUploadStore = defineStore('upload', () => {
 
   // ==================== 列表刷新 & 进度统计 ====================
 
-  const scheduleRefresh = useThrottleFn(() => window.$bus.emit('file:refresh'), 1000, true, false)
+  // 不能关 leading：VueUse 15 的节流在静默期后的首次调用会被直接丢弃，单文件上传就永远不会刷新
+  const scheduleRefresh = useThrottleFn(() => window.$bus.emit('file:refresh'), 1000)
 
   // 进度先记在普通 Map 里，由定时器批量刷进响应式字段并算速度，
   // 避免每个 XHR progress 事件都触发整个队列表格重渲染
