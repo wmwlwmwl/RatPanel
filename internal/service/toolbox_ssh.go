@@ -115,6 +115,17 @@ func (s *ToolboxSSHService) UpdatePort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ubuntu 22.04+ 的 ssh.socket 以 socket 激活方式接管监听，端口由 socket 的 ListenStream 决定，
+	// 不先停用则改 sshd_config 不生效；单元不存在时 IsEnabled 返回 false，自动跳过
+	socket := s.service + ".socket"
+	if enabled, _ := systemctl.IsEnabled(r.Context(), socket); enabled {
+		if err = systemctl.Stop(r.Context(), socket); err != nil {
+			Error(w, http.StatusInternalServerError, s.t.Get("failed to stop ssh socket: %v", err))
+			return
+		}
+		_ = systemctl.Disable(r.Context(), socket)
+	}
+
 	s.restart(w, r)
 }
 
