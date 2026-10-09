@@ -1554,7 +1554,7 @@ onUnmounted(() => {
 
           <!-- 列表视图 -->
           <template v-else>
-            <div class="list-col col-checkbox">
+            <div class="list-col col-checkbox" @click.stop="toggleCheckbox(item)">
               <n-checkbox
                 :checked="isSelected(item)"
                 @update:checked="toggleCheckbox(item)"
@@ -1861,6 +1861,14 @@ onUnmounted(() => {
 
       &.cut {
         opacity: 0.5;
+      }
+
+      // 勾选格吃掉行的左侧和上下 padding，点偏了也不会落到整行单选上
+      .col-checkbox {
+        align-self: stretch;
+        box-sizing: content-box;
+        margin: -6px 0 -6px -8px;
+        padding-left: 8px;
       }
     }
   }

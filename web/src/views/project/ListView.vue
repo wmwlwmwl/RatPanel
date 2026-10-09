@@ -103,8 +103,9 @@ const columns: any = [
       return h(
         NTag,
         {
-          class: 'cursor-pointer hover:opacity-60',
+          class: 'tag-ellipsis cursor-pointer hover:opacity-60',
           type: 'info',
+          title: row.root_dir,
           onClick: () => {
             if (fileStore.activeTab) fileStore.updateTabPath(fileStore.activeTabId, row.root_dir)
             router.push({ name: 'file-index' })

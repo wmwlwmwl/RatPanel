@@ -72,3 +72,13 @@ body {
     }
   }
 }
+
+/* 表格里的长路径标签：限制在单元格内并省略，否则溢出会盖住相邻列 */
+.n-tag.tag-ellipsis {
+  max-width: 100%;
+
+  .n-tag__content {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
