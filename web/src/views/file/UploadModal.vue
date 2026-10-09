@@ -243,9 +243,11 @@ watch(
   },
 )
 
-// 关闭弹窗不中断上传，提示一下
+// 关闭弹窗时清掉已结束项，不中断上传，提示一下
 watch(show, (val) => {
-  if (!val && uploadStore.activeCount > 0) {
+  if (val) return
+  uploadStore.clearFinished()
+  if (uploadStore.activeCount > 0) {
     window.$message.info($gettext('Uploads will continue in the background'))
   }
 })
