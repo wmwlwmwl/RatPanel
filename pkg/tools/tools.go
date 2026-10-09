@@ -186,22 +186,17 @@ func CollectTopProcesses() types.TopProcesses {
 	return result
 }
 
-// 以下三个自杀式操作靠 sleep 1 熬过 HTTP 响应，ExecfAsync 入口已断开取消链，
-// 调用方直接传请求 ctx 即可，无需再包 WithoutCancel
-
-// StopPanel 停止面板
-func StopPanel(ctx context.Context) {
-	_ = shell.ExecfAsync(ctx, "sleep 1 && systemctl stop acepanel")
-}
+// 以下两个自杀式操作交给 systemd 的瞬态定时器延迟 1 秒执行，既熬过 HTTP 响应，
+// 又脱离面板自身的 cgroup，不会在停服务时被连带杀掉而误报命令失败
 
 // RestartPanel 重启面板
 func RestartPanel(ctx context.Context) {
-	_ = shell.ExecfAsync(ctx, "sleep 1 && systemctl restart acepanel")
+	_ = shell.ExecfAsync(ctx, "systemd-run --quiet --collect --on-active=1 systemctl restart acepanel")
 }
 
 // RestartServer 重启服务器
 func RestartServer(ctx context.Context) {
-	_ = shell.ExecfAsync(ctx, "sleep 1 && reboot")
+	_ = shell.ExecfAsync(ctx, "systemd-run --quiet --collect --on-active=1 systemctl reboot")
 }
 
 // IsChina 是否中国大陆

@@ -11,7 +11,7 @@ const model = ref({
 })
 
 useRequest(firewall.status).onSuccess(({ data }) => {
-  model.value.firewallStatus = data
+  model.value.firewallStatus = data.running
 })
 useRequest(safe.pingStatus).onSuccess(({ data }) => {
   model.value.pingStatus = data

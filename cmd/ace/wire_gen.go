@@ -71,12 +71,13 @@ func initAce() (*app.Ace, func() error, error) {
 
 	wireValue18_0 := caddy.NewApp(wireValue1_0)
 
-	wireValue4_0, wireErr4 := bootstrap.NewDB(wireValue0_0)
+	wireValue4_0, wireResourceCleanup4, wireErr4 := bootstrap.NewDB(wireValue0_0)
 	if wireErr4 != nil {
 		wireCommitted = true
 		cleanupErr := wireCleanup.close()
 		return wireZero0, nil, errors.Join(wireErr4, cleanupErr)
 	}
+	wireCleanup.arm(wireResourceCleanup4)
 
 	wireValue106_0 := data.NewDatabaseServerRepo(wireValue4_0)
 
@@ -177,12 +178,13 @@ func initAce() (*app.Ace, func() error, error) {
 
 	wireValue123_0 := data.NewUserTokenRepo(wireValue0_0, wireValue4_0, wireValue1_0)
 
-	wireValue9_0, wireErr9 := middleware.NewMiddlewares(wireValue0_0, wireValue1_0, wireValue6_0, wireValue90_0, wireValue123_0)
+	wireValue9_0, wireResourceCleanup9, wireErr9 := middleware.NewMiddlewares(wireValue0_0, wireValue1_0, wireValue6_0, wireValue90_0, wireValue123_0)
 	if wireErr9 != nil {
 		wireCommitted = true
 		cleanupErr := wireCleanup.close()
 		return wireZero0, nil, errors.Join(wireErr9, cleanupErr)
 	}
+	wireCleanup.arm(wireResourceCleanup9)
 
 	wireValue8_0 := bootstrap.NewValidator(wireValue0_0, wireValue4_0, wireValue1_0)
 

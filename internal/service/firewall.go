@@ -44,7 +44,10 @@ func (s *FirewallService) GetStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Success(w, running)
+	Success(w, chix.M{
+		"running": running,
+		"name":    s.firewall.Name(),
+	})
 }
 
 func (s *FirewallService) UpdateStatus(w http.ResponseWriter, r *http.Request) {

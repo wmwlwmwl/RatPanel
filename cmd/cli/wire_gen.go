@@ -30,12 +30,13 @@ func initCli() (*app.Cli, func() error, error) {
 
 	wireValue1_0 := bootstrap.NewT(wireValue0_0)
 
-	wireValue4_0, wireErr4 := bootstrap.NewDB(wireValue0_0)
+	wireValue4_0, wireResourceCleanup4, wireErr4 := bootstrap.NewDB(wireValue0_0)
 	if wireErr4 != nil {
 		wireCommitted = true
 		cleanupErr := wireCleanup.close()
 		return wireZero0, nil, errors.Join(wireErr4, cleanupErr)
 	}
+	wireCleanup.arm(wireResourceCleanup4)
 
 	wireValue2_0, wireResourceCleanup2, wireErr2 := bootstrap.NewLogger(wireValue0_0)
 	if wireErr2 != nil {

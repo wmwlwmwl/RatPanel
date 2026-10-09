@@ -20,12 +20,14 @@ const currentTab = ref('rule')
 // n-tabs 对 v-if 动态增删子 tab 不会重算指示条位置，用 key 强制重挂
 const ruleTabs = ['rule', 'ip-rule', 'forward']
 const firewallRunning = ref(false)
+const firewallName = ref('')
 const ready = ref(false)
 
 const { send: refreshStatus } = useRequest(firewall.status)
   .onSuccess(({ data }) => {
-    firewallRunning.value = data
-    if (!data && ruleTabs.includes(currentTab.value)) currentTab.value = 'scan'
+    firewallRunning.value = data.running
+    firewallName.value = data.name
+    if (!data.running && ruleTabs.includes(currentTab.value)) currentTab.value = 'scan'
   })
   .onComplete(() => {
     ready.value = true
@@ -52,14 +54,20 @@ onUnmounted(() => {
         <n-tab name="setting" :tab="$gettext('Settings')" />
       </n-tabs>
     </template>
-    <template v-if="ready">
+    <n-flex v-if="ready" vertical :size="20">
+      <n-alert v-if="firewallName" type="info" :bordered="false">
+        {{ $gettext('Current firewall: %{ name }', { name: firewallName }) }}
+      </n-alert>
+      <n-alert v-else type="warning" :bordered="false">
+        {{ $gettext('No supported firewall detected, please install firewalld or ufw') }}
+      </n-alert>
       <rule-view v-if="currentTab === 'rule'" />
       <ip-rule-view v-if="currentTab === 'ip-rule'" />
       <forward-view v-if="currentTab === 'forward'" />
       <scan-view v-if="currentTab === 'scan'" />
       <tamper-view v-if="currentTab === 'tamper'" />
       <setting-view v-if="currentTab === 'setting'" />
-    </template>
+    </n-flex>
   </PageContainer>
 </template>
 

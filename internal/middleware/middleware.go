@@ -28,7 +28,7 @@ type Middlewares struct {
 	userToken biz.UserTokenRepo
 }
 
-func NewMiddlewares(conf *config.Config, t *gotext.Locale, session *sessions.Manager, appRepo biz.AppRepo, userTokenRepo biz.UserTokenRepo) (*Middlewares, error) {
+func NewMiddlewares(conf *config.Config, t *gotext.Locale, session *sessions.Manager, appRepo biz.AppRepo, userTokenRepo biz.UserTokenRepo) (*Middlewares, func() error, error) {
 	// http 访问日志写入轮转文件
 	w, err := logrotate.New(filepath.Join(app.Root, "panel/storage/logs/http.log"),
 		logrotate.WithMaxSize(10*logrotate.MB),
@@ -38,7 +38,7 @@ func NewMiddlewares(conf *config.Config, t *gotext.Locale, session *sessions.Man
 		logrotate.WithLocation(time.Local),
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	return &Middlewares{
@@ -48,7 +48,7 @@ func NewMiddlewares(conf *config.Config, t *gotext.Locale, session *sessions.Man
 		session:   session,
 		appRepo:   appRepo,
 		userToken: userTokenRepo,
-	}, nil
+	}, w.Close, nil
 }
 
 // Globals 全局中间件集合，应用到每个请求；whitelist 为登录白名单路径。

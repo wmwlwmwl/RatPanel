@@ -1670,10 +1670,12 @@ func (r *backupRepo) FixPanel(ctx context.Context) error {
 		return errors.New(r.t.Get("Files are normal and do not need to be repaired, please run acepanel update to update the panel"))
 	}
 
-	// 有异常，先停止面板
+	// 有异常，先同步停掉面板再动文件，避免运行中的面板往新目录写东西
 	// 停掉面板后的修复被取消会让面板起不来，后续全程不可取消
 	ctx = context.WithoutCancel(ctx)
-	tools.StopPanel(ctx)
+	if err := systemctl.Stop(ctx, "acepanel"); err != nil {
+		return errors.New(r.t.Get("Failed to stop panel: %v", err))
+	}
 
 	// 删除损坏的辅助数据库（会自动重建）
 	for _, name := range brokenAuxDBs {
@@ -1686,12 +1688,14 @@ func (r *backupRepo) FixPanel(ctx context.Context) error {
 		}
 	}
 
-	// 仅辅助数据库异常，重启即可恢复
+	// 仅辅助数据库异常，重新启动即可恢复
 	if !panelBroken {
+		if err := systemctl.Start(ctx, "acepanel"); err != nil {
+			return errors.New(r.t.Get("Failed to start panel: %v", err))
+		}
 		if app.IsCli {
 			fmt.Println(r.t.Get("|-Fix completed"))
 		}
-		tools.RestartPanel(ctx)
 		return nil
 	}
 
@@ -1727,6 +1731,7 @@ func (r *backupRepo) FixPanel(ctx context.Context) error {
 }
 
 // restorePanel 用指定的面板备份覆盖当前面板，完成后重启面板
+// 面板内恢复备份与 CLI 修复共用，重启必须走 RestartPanel 的延迟排程，面板内调用才不会自杀在半路
 func (r *backupRepo) restorePanel(ctx context.Context, backup string) error {
 	// 覆盖的是运行中的面板二进制与 systemd 单元，中途取消会留下起不来的面板
 	ctx = context.WithoutCancel(ctx)
@@ -1898,10 +1903,7 @@ func (r *backupRepo) UpdatePanel(ctx context.Context, version, url, checksum str
 	r.log.Info("panel updated", slog.String("version", version))
 	progress(r.t.Get("Update completed"))
 
-	// 由调用方重启面板
-	if sqlDB, err := r.db.DB(); err == nil {
-		_ = sqlDB.Close()
-	}
+	// 由调用方重启面板，数据库连接在进程退出时统一关闭
 	return nil
 }
 

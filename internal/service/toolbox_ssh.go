@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cast"
 
 	"github.com/acepanel/panel/v3/internal/request"
+	"github.com/acepanel/panel/v3/pkg/firewall"
 	"github.com/acepanel/panel/v3/pkg/io"
 	"github.com/acepanel/panel/v3/pkg/os"
 	"github.com/acepanel/panel/v3/pkg/shell"
@@ -17,8 +18,9 @@ import (
 )
 
 type ToolboxSSHService struct {
-	t       *gotext.Locale
-	service string
+	t        *gotext.Locale
+	service  string
+	firewall firewall.Firewall
 }
 
 func NewToolboxSSHService(t *gotext.Locale) *ToolboxSSHService {
@@ -28,8 +30,9 @@ func NewToolboxSSHService(t *gotext.Locale) *ToolboxSSHService {
 		service = "ssh"
 	}
 	return &ToolboxSSHService{
-		t:       t,
-		service: service,
+		t:        t,
+		service:  service,
+		firewall: firewall.NewFirewall(),
 	}
 }
 
@@ -85,6 +88,26 @@ func (s *ToolboxSSHService) UpdatePort(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		Error(w, http.StatusUnprocessableEntity, "%v", err)
 		return
+	}
+
+	// 先放行再改端口
+	running, err := s.firewall.Status(r.Context())
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "%v", err)
+		return
+	}
+	if running {
+		if err = s.firewall.Port(r.Context(), firewall.FireInfo{
+			Type:      firewall.TypeNormal,
+			PortStart: req.Port,
+			PortEnd:   req.Port,
+			Protocol:  firewall.ProtocolTCP,
+			Strategy:  firewall.StrategyAccept,
+			Direction: firewall.DirectionIn,
+		}, firewall.OperationAdd); err != nil {
+			Error(w, http.StatusInternalServerError, s.t.Get("failed to update firewall rule: %v", err))
+			return
+		}
 	}
 
 	if err = s.updateSSHConfig("Port", cast.ToString(req.Port)); err != nil {

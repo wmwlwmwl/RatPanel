@@ -13,8 +13,15 @@ import (
 )
 
 // Firewall 防火墙统一接口
-// 变更方法由 NewFirewall 返回的实现统一加锁并断开取消链，各后端实现内无需再处理
 type Firewall interface {
+	backend
+	// Name 当前使用的防火墙软件名，未检测到支持的防火墙时为空
+	Name() string
+}
+
+// backend 各防火墙软件需实现的操作
+// 变更方法由 NewFirewall 返回的实现统一加锁并断开取消链，各后端实现内无需再处理
+type backend interface {
 	// Status 获取防火墙运行状态
 	Status(ctx context.Context) (bool, error)
 	// Enable 启用防火墙
@@ -45,18 +52,24 @@ func NewFirewall() Firewall {
 	return lockedFirewall{}
 }
 
+// detected 探测到的防火墙后端及其软件名
+type detected struct {
+	backend
+	name string
+}
+
 // detectFirewall 防火墙类型是开机后不再变化的环境事实，探测一次后全局复用
 // 探测用不可取消 ctx：跟随调用方 ctx 时，取消会让两次探测都失败而退回 firewalld 默认值，并把这个错误结论缓存到进程结束
-var detectFirewall = sync.OnceValue(func() Firewall {
+var detectFirewall = sync.OnceValue(func() detected {
 	ctx := context.Background()
 	if _, err := shell.Execf(ctx, "firewall-cmd --version"); err == nil {
-		return newFirewalld()
+		return detected{newFirewalld(), "firewalld"}
 	}
 	if _, err := shell.Execf(ctx, "ufw version"); err == nil {
-		return newUFW()
+		return detected{newUFW(), "ufw"}
 	}
-	// 默认 firewalld
-	return newFirewalld()
+	// 都没装时按 firewalld 处理，名字留空供上层提示未安装
+	return detected{newFirewalld(), ""}
 })
 
 // mu 串行化所有防火墙变更操作
@@ -67,6 +80,10 @@ var mu sync.Mutex
 // 每个变更都是「写永久配置 + reload」的组合，中途取消会让两者脱节：
 // firewalld 下规则进了永久配置却没进 runtime，ufw 下面板读的规则文件已改而内核里的规则还在跑
 type lockedFirewall struct{}
+
+func (lockedFirewall) Name() string {
+	return detectFirewall().name
+}
 
 func (lockedFirewall) Status(ctx context.Context) (bool, error) {
 	return detectFirewall().Status(ctx)

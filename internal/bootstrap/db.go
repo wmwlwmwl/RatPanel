@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"errors"
 	"log/slog"
 	"path/filepath"
 	"time"
@@ -16,7 +17,8 @@ import (
 	"github.com/acepanel/panel/v3/pkg/config"
 )
 
-func NewDB(conf *config.Config) (*gorm.DB, error) {
+// NewDB 打开面板数据库，返回的 cleanup 在进程退出时关闭连接
+func NewDB(conf *config.Config) (*gorm.DB, func() error, error) {
 	// db 日志写入轮转文件
 	w, err := logrotate.New(filepath.Join(app.Root, "panel/storage/logs/db.log"),
 		logrotate.WithMaxSize(10*logrotate.MB),
@@ -26,7 +28,7 @@ func NewDB(conf *config.Config) (*gorm.DB, error) {
 		logrotate.WithLocation(time.Local),
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	handler := slog.New(slog.NewJSONHandler(w, nil)).Handler()
@@ -42,17 +44,17 @@ func NewDB(conf *config.Config) (*gorm.DB, error) {
 			DisableForeignKeyConstraintWhenMigrating: true,
 		})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sqlDB.SetMaxOpenConns(1)
 	sqlDB.SetMaxIdleConns(1)
 
-	return db, nil
+	return db, func() error { return errors.Join(sqlDB.Close(), w.Close()) }, nil
 }
 
 func NewMigrate(db *gorm.DB) *gormigrate.Gormigrate {
