@@ -119,13 +119,23 @@ func (s *ToolboxSSHService) UpdatePort(w http.ResponseWriter, r *http.Request) {
 	// 不先停用则改 sshd_config 不生效；单元不存在时 Status/IsEnabled 返回 false，自动跳过
 	// disable 不会停止运行中的单元，所以 Stop 按运行状态判断、Disable 按启用状态判断，两者独立
 	socket := s.service + ".socket"
-	if active, _ := systemctl.Status(r.Context(), socket); active {
+	active, err := systemctl.Status(r.Context(), socket)
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "%v", err)
+		return
+	}
+	if active {
 		if err = systemctl.Stop(r.Context(), socket); err != nil {
 			Error(w, http.StatusInternalServerError, s.t.Get("failed to stop ssh socket: %v", err))
 			return
 		}
 	}
-	if enabled, _ := systemctl.IsEnabled(r.Context(), socket); enabled {
+	enabled, err := systemctl.IsEnabled(r.Context(), socket)
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "%v", err)
+		return
+	}
+	if enabled {
 		if err = systemctl.Disable(r.Context(), socket); err != nil {
 			Error(w, http.StatusInternalServerError, s.t.Get("failed to disable ssh socket: %v", err))
 			return
